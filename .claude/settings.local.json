@@ -1,0 +1,22 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(venv/bin/python *)",
+      "WebFetch(domain:github.com)",
+      "WebFetch(domain:raw.githubusercontent.com)",
+      "WebFetch(domain:api.github.com)",
+      "Bash(curl -s https://raw.githubusercontent.com/f4inu/FNB58/main/device/device_manager.py)",
+      "Bash(curl -s https://raw.githubusercontent.com/f4inu/FNB58/main/device/bluetooth_reader.py)",
+      "Bash(curl -s https://raw.githubusercontent.com/f4inu/FNB58/main/device/data_processor.py)",
+      "Bash(curl -s https://raw.githubusercontent.com/f4inu/FNB58/main/README.md)",
+      "Bash(curl -s https://raw.githubusercontent.com/f4inu/FNB58/main/app.py)",
+      "Bash(curl *)",
+      "Bash(lsusb)",
+      "Bash(venv/bin/python app.py)",
+      "Bash(echo \"PID=$!\")",
+      "Read(//tmp/**)",
+      "Bash(pkill -f \"python.*app.py\")",
+      "Bash(venv/bin/pip install *)"
+    ]
+  }
+}

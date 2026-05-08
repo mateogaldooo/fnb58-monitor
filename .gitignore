@@ -1,0 +1,13 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+
+# Entorno virtual
+venv/
+
+# Base de datos local
+data/
+
+# Dependencias descargadas
+baryluk/

@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>FNB58 Monitor</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+
+<!-- ── Header ─────────────────────────────────────────────── -->
+<header>
+  <div class="logo">FNB58 Monitor</div>
+
+  <div class="header-center">
+    <div class="status-dot" id="status-dot"></div>
+    <span id="status-label">Desconectado</span>
+    <span class="hz-badge" id="hz-badge" style="display:none"></span>
+  </div>
+
+  <div class="header-right">
+    <button class="primary" id="btn-connect"    onclick="connect()">Conectar</button>
+    <button               id="btn-disconnect" onclick="disconnect()" disabled>Desconectar</button>
+    <button               id="btn-reset"      onclick="resetAccum()"  disabled title="Resetea energía y capacidad">Reset</button>
+    <button               id="btn-export"     onclick="exportCSV()"   disabled title="Exportar datos a CSV">CSV</button>
+  </div>
+</header>
+
+<main>
+
+  <!-- Aviso sin señal -->
+  <div id="setup-note">
+    Midiendo <b>0 V / 0 A</b>. Para ver datos reales conecta un
+    <b>cargador al puerto INPUT</b> y un <b>dispositivo al puerto OUTPUT</b>
+    del FNB58. El cable del ordenador va al puerto lateral DATA.
+  </div>
+
+  <!-- ── Métricas principales ──────────────────────────── -->
+  <div class="metrics">
+    <div class="card voltage">
+      <div class="card-label">Voltaje</div>
+      <div class="card-main">
+        <span class="card-value" id="voltage">—</span><span class="card-unit">V</span>
+      </div>
+      <div id="protocol-badge" class="protocol-badge" style="display:none"></div>
+      <div class="card-stats">
+        <span class="stat"><span class="stat-label">mín</span><span class="stat-val" id="v-min">—</span></span>
+        <span class="stat"><span class="stat-label">máx</span><span class="stat-val" id="v-max">—</span></span>
+        <span class="stat"><span class="stat-label">med</span><span class="stat-val" id="v-avg">—</span></span>
+      </div>
+    </div>
+    <div class="card current">
+      <div class="card-label">Corriente</div>
+      <div class="card-main">
+        <span class="card-value" id="current">—</span><span class="card-unit">A</span>
+      </div>
+      <div class="card-stats">
+        <span class="stat"><span class="stat-label">mín</span><span class="stat-val" id="a-min">—</span></span>
+        <span class="stat"><span class="stat-label">máx</span><span class="stat-val" id="a-max">—</span></span>
+        <span class="stat"><span class="stat-label">med</span><span class="stat-val" id="a-avg">—</span></span>
+      </div>
+    </div>
+    <div class="card power">
+      <div class="card-label">Potencia</div>
+      <div class="card-main">
+        <span class="card-value" id="power">—</span><span class="card-unit">W</span>
+      </div>
+      <div class="card-stats">
+        <span class="stat"><span class="stat-label">mín</span><span class="stat-val" id="w-min">—</span></span>
+        <span class="stat"><span class="stat-label">máx</span><span class="stat-val" id="w-max">—</span></span>
+        <span class="stat"><span class="stat-label">med</span><span class="stat-val" id="w-avg">—</span></span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Métricas secundarias ───────────────────────────── -->
+  <div class="metrics-sm">
+    <div class="card-sm">
+      <div class="card-label">Energía</div>
+      <span class="card-value" id="energy">—</span><span class="card-unit-sm">Wh</span>
+    </div>
+    <div class="card-sm">
+      <div class="card-label">Capacidad</div>
+      <span class="card-value" id="capacity">—</span><span class="card-unit-sm">mAh</span>
+    </div>
+    <div class="card-sm">
+      <div class="card-label">Temperatura</div>
+      <span class="card-value" id="temp">—</span><span class="card-unit-sm">°C</span>
+    </div>
+    <div class="card-sm">
+      <div class="card-label">D+</div>
+      <span class="card-value" id="dp">—</span><span class="card-unit-sm">V</span>
+    </div>
+    <div class="card-sm">
+      <div class="card-label">D−</div>
+      <span class="card-value" id="dn">—</span><span class="card-unit-sm">V</span>
+    </div>
+  </div>
+
+  <!-- ── Gráfico ────────────────────────────────────────── -->
+  <div class="chart-card">
+    <div class="chart-header">
+
+      <!-- Toggles de series -->
+      <div class="chart-toggles">
+        <button class="toggle-btn active" id="tog-v" onclick="toggleSeries(0)" data-label="V">
+          <span class="tog-line" style="background:#111"></span> Voltaje
+        </button>
+        <button class="toggle-btn active" id="tog-a" onclick="toggleSeries(1)" data-label="A">
+          <span class="tog-line" style="background:#666"></span> Corriente
+        </button>
+        <button class="toggle-btn active" id="tog-w" onclick="toggleSeries(2)" data-label="W">
+          <span class="tog-line" style="background:#bbb"></span> Potencia
+        </button>
+      </div>
+
+      <!-- Controles de ventana y pausa -->
+      <div class="chart-controls">
+        <div class="window-btns">
+          <button class="win-btn" onclick="setWindow(30)"  id="win-30" >30s</button>
+          <button class="win-btn active" onclick="setWindow(60)"  id="win-60" >1m</button>
+          <button class="win-btn" onclick="setWindow(300)" id="win-300">5m</button>
+          <button class="win-btn" onclick="setWindow(0)"   id="win-all">Todo</button>
+        </div>
+        <button class="pause-btn" id="btn-pause" onclick="togglePause()" title="Pausar/reanudar gráfico">
+          <span id="pause-icon">⏸</span>
+        </button>
+        <button class="win-btn" id="btn-reset-zoom" onclick="resetZoom()"
+                title="Restablecer zoom" style="display:none">1:1</button>
+        <button class="win-btn" id="btn-png" onclick="exportChartPNG()"
+                title="Exportar gráfico como PNG">PNG</button>
+      </div>
+
+    </div>
+    <div class="chart-wrap">
+      <canvas id="chart"></canvas>
+    </div>
+    <div class="chart-footer">
+      <span id="chart-samples">0 muestras</span>
+      <span id="last-update"></span>
+    </div>
+  </div>
+
+
+  <!-- ── Historial de sesiones ──────────────────────── -->
+  <div class="sessions-card">
+
+    <div class="sessions-header">
+      <span class="card-label" style="margin-bottom:0">Historial de sesiones</span>
+      <div class="sessions-header-right">
+        <span class="session-view-badge" id="compare-badge" style="display:none">
+          Comparando <strong id="compare-badge-text"></strong>
+        </span>
+        <button class="exit-session-btn" id="btn-clear-compare"
+                onclick="clearComparison()" style="display:none">✕ Comparación</button>
+        <span class="session-view-badge" id="session-view-badge" style="display:none">
+          Viendo sesión <strong id="session-view-id"></strong>
+        </span>
+        <button class="exit-session-btn" id="btn-exit-session"
+                onclick="exitSessionView()" style="display:none">← En directo</button>
+        <button class="refresh-sessions-btn" onclick="loadSessions()">Actualizar</button>
+      </div>
+    </div>
+
+    <p class="sessions-empty-msg" id="sessions-empty" style="display:none">
+      No hay sesiones guardadas todavía.
+    </p>
+
+    <div class="sessions-table-wrap" id="sessions-table-wrap" style="display:none">
+      <table class="sessions-table">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Nombre</th>
+            <th>Inicio</th>
+            <th>Duración</th>
+            <th class="num">Wh</th>
+            <th class="num">mAh</th>
+            <th class="num">V máx</th>
+            <th class="num">A máx</th>
+            <th class="num">W máx</th>
+            <th class="num">W med</th>
+            <th class="num">Muestras</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody id="sessions-tbody"></tbody>
+      </table>
+    </div>
+
+  </div>
+
+</main>
+
+<!-- ── Modal resumen de sesión ──────────────────────────────── -->
+<div id="summary-overlay" class="modal-overlay" style="display:none" onclick="closeSummaryModal()">
+  <div class="modal-card" onclick="event.stopPropagation()">
+    <div class="modal-header">
+      <span class="modal-title">Resumen de sesión</span>
+      <button class="modal-close" onclick="closeSummaryModal()">✕</button>
+    </div>
+    <div class="modal-body" id="summary-body"></div>
+    <div class="modal-footer">
+      <button class="primary" id="summary-close-btn" onclick="closeSummaryModal()">Cerrar</button>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom@2.0.1/dist/chartjs-plugin-zoom.min.js"></script>
+<script src="/static/app.js"></script>
+</body>
+</html>
