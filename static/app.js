@@ -6,6 +6,7 @@ const CHART_FPS        = 4;
 
 // ── State ───────────────────────────────────────────────────────
 let chart = null;
+let tempChart = null;
 let zeroCount = 0;
 let paused = false;
 let windowSeconds = 60;
@@ -254,6 +255,84 @@ function initChart() {
   }, 1000 / CHART_FPS);
 }
 
+function initTempChart() {
+  const ctx = $("temp-chart").getContext("2d");
+  tempChart = new Chart(ctx, {
+    type: "line",
+    data: {
+      labels: [],
+      datasets: [{
+        label: "Temperatura (°C)",
+        data: [],
+        borderColor: "#f97316",
+        backgroundColor: "rgba(249,115,22,.07)",
+        borderWidth: 1.5,
+        pointRadius: 0,
+        tension: 0.3,
+        fill: true,
+      }],
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      animation: false,
+      interaction: { mode: "index", intersect: false },
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          backgroundColor: "#111", titleColor: "#fff",
+          bodyColor: "#ccc", borderColor: "#333", borderWidth: 1, padding: 8,
+          callbacks: { label: c => `  ${c.parsed.y.toFixed(1)} °C` },
+        },
+        zoom: {
+          zoom: { wheel: { enabled: false }, pinch: { enabled: false } },
+          pan: { enabled: false },
+        },
+      },
+      scales: {
+        x: {
+          ticks: { color: "#aaa", maxTicksLimit: 6, font: { size: 10, family: "'JetBrains Mono', monospace" } },
+          grid:  { color: "#ebebeb" },
+          border: { color: "#e0e0e0" },
+        },
+        y: {
+          position: "left",
+          ticks: {
+            color: "#aaa",
+            font: { size: 10, family: "'JetBrains Mono', monospace" },
+            callback: v => v.toFixed(1) + " °C",
+            stepSize: 0.1,
+            maxTicksLimit: 6,
+          },
+          grid:  { color: "#ebebeb" },
+          border: { color: "#e0e0e0" },
+        },
+      },
+    },
+  });
+}
+
+function rebuildTempChart() {
+  let visible = getWindowedReadings();
+  if (visible.length > MAX_CHART_POINTS) {
+    const step = Math.ceil(visible.length / MAX_CHART_POINTS);
+    visible = visible.filter((_, i) => i % step === 0);
+  }
+  tempChart.data.labels = compareMode
+    ? toElapsedLabels(visible)
+    : visible.map(r => r.timestamp.slice(11, 19));
+  tempChart.data.datasets[0].data = visible.map(r => r.temperature);
+  tempChart.update("none");
+
+  if (visible.length) {
+    const temps = visible.map(r => r.temperature);
+    const mn = Math.min(...temps), mx = Math.max(...temps);
+    $("temp-range").textContent = `${mn.toFixed(1)} – ${mx.toFixed(1)} °C`;
+  } else {
+    $("temp-range").textContent = "";
+  }
+}
+
 function getWindowedReadings() {
   if (windowSeconds === 0 || readings.length === 0) return readings;
   const cutoff = new Date(Date.now() - windowSeconds * 1000).toISOString();
@@ -304,12 +383,17 @@ function rebuildChart() {
     ds[5].data = comp.map(r => r.power);
   }
   chart.update("none");
+  rebuildTempChart();
 }
 
 function clearChart() {
   chart.data.labels = [];
   chart.data.datasets.forEach(d => d.data = []);
   chart.update("none");
+  tempChart.data.labels = [];
+  tempChart.data.datasets[0].data = [];
+  tempChart.update("none");
+  $("temp-range").textContent = "";
   $("chart-samples").textContent = "0 muestras";
   $("last-update").textContent = "";
 }
@@ -768,6 +852,7 @@ function clearProtocol() {
 // ── Init ─────────────────────────────────────────────────────────
 document.addEventListener("DOMContentLoaded", () => {
   initChart();
+  initTempChart();
   fetch("/api/status")
     .then(r => r.json())
     .then(d => { if (d.connected) setConnected(true); });

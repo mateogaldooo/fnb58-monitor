@@ -351,6 +351,27 @@ main {
   color: var(--subtle);
 }
 
+/* ── Temperature chart card ───────────────────────────────── */
+.temp-chart-card {
+  border-left: 3px solid #fed7aa;
+}
+
+.temp-chart-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.temp-chart-wrap { position: relative; height: 110px; }
+
+.temp-range {
+  font-family: var(--font-num);
+  font-size: 10px;
+  color: var(--subtle);
+  letter-spacing: .3px;
+}
+
 /* ── Setup note ───────────────────────────────────────────── */
 #setup-note {
   display: none;

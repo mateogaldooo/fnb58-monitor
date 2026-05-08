@@ -11,6 +11,7 @@ from fnb58_reader import FNB58Reader
 from db import SessionDB
 
 app = Flask(__name__)
+app.config["SEND_FILE_MAX_AGE_DEFAULT"] = 0   # no cache for static files in dev
 socketio = SocketIO(app, cors_allowed_origins="*", async_mode="threading")
 
 reader = FNB58Reader()
